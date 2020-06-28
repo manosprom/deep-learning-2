@@ -1,13 +1,15 @@
 import os
 import shutil
+from builtins import staticmethod
 
+from src.models.ModelStats import ModelStats
 from src.MuraLoader import MuraLoader
 from src.seeded import tf
 from src.models.tf_utils import metrics, callbacks, createModelPath
 from os import path
 
 
-class MuraRunner(object):
+class ModelRunner(object):
     def __init__(self, muraLoader: MuraLoader):
         self._muraLoader = muraLoader
 
@@ -16,8 +18,8 @@ class MuraRunner(object):
     #     del model
     #     gc.collect()
 
-    def run(self, model: tf.keras.models.Model, epochs=5, verbose=1, overwrite=True):
-        modelPath = createModelPath(model.name)
+    def run(self, name: str, model: tf.keras.models.Model, epochs=5, verbose=1, overwrite=False):
+        modelPath = createModelPath(name)
         if path.exists(modelPath):
             if overwrite:
                 shutil.rmtree(modelPath)
@@ -26,15 +28,28 @@ class MuraRunner(object):
         os.mkdir(modelPath)
 
         model = self.__compile(model)
-        self.save_model_summary(model)
-        self.save_model_grah(model)
+        self.save_model_summary(name=name, model=model)
+        self.save_model_graph(name=name, model=model)
+
+        if verbose == 1:
+            print(model.summary())
 
         train_set, validation_set, test_set = self._muraLoader.get_sets(0.2)
         train_generator, validation_generator, test_generator = self._muraLoader.get_generators(train_set, validation_set, test_set, batch_size=32)
 
-        model, history = self.__fit(model, train_generator, validation_generator, epochs=epochs, verbose=verbose)
+        history = model.fit(
+            train_generator,
+            validation_data=validation_generator,
+            epochs=epochs,
+            callbacks=callbacks(model=name),
+            verbose=verbose
+        )
+
+        self.save_model_history(name=name, history=history.history)
+
         evaluation = model.evaluate(test_generator)
-        return model, history, evaluation
+
+        return ModelStats(model, history, evaluation)
 
     def __compile(self, model: tf.keras.models.Model):
         adam = tf.optimizers.Adam()
@@ -43,26 +58,22 @@ class MuraRunner(object):
 
         return model
 
-    def __fit(self, model, train_generator, validation_generator, epochs=5, verbose=1):
-
-        history = model.fit(
-            train_generator,
-            validation_data=validation_generator,
-            epochs=epochs,
-            callbacks=callbacks(model=model.name),
-            verbose=verbose
-        )
-        return model, history
-
-    def save_model_summary(self, model):
+    @staticmethod
+    def save_model_summary(name, model):
         from contextlib import redirect_stdout
         print("Saving Model Summary")
 
-        with open(createModelPath(model.name, sub="model_summary.txt"), 'w') as f:
+        with open(createModelPath(name, sub="model_summary.txt"), 'w') as f:
             with redirect_stdout(f):
                 model.summary()
 
-    def save_model_grah(self, model):
+    @staticmethod
+    def save_model_graph(name, model):
         from tensorflow.keras.utils import plot_model
         print("Saving Model Plot")
-        plot_model(model, to_file=createModelPath(model.name, sub="model_plot.png"), show_shapes=True, show_layer_names=True, expand_nested=True)
+        plot_model(model, to_file=createModelPath(name, sub="model_plot.png"), show_shapes=True, show_layer_names=True, expand_nested=True)
+
+    @staticmethod
+    def save_model_history(name, history):
+        import pandas as pd
+        pd.DataFrame.from_dict(history).to_csv(createModelPath(name, sub="model_history.txt"), index=False, sep="\t")

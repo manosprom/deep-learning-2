@@ -90,7 +90,7 @@ class MuraLoader(object):
         train_set, validation_set = train_test_split(train_set, stratify=train_set['StudyLabel'], random_state=seed, test_size=split)
         return train_set, validation_set, test_set
 
-    def get_generators(self, train_set, validation_set, test_set=None, batch_size=32):
+    def get_generators(self, train_set, validation_set, test_set, batch_size=32):
         # https://www.tensorflow.org/api_docs/python/tf/keras/preprocessing/image/ImageDataGenerator
         # https://medium.com/datadriveninvestor/keras-imagedatagenerator-methods-an-easy-guide-550ecd3c0a92
 
