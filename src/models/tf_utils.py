@@ -30,7 +30,7 @@ def checkPointer(model, verbose=0):
     checkPointPath = createModelPath(model, sub="weights.{epoch:02d}-{val_loss:.4f}-{val_auc:.4f}-{val_accuracy:.4f}-{val_kappa:.4f}.h5")
     checkpointer = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkPointPath,
-        save_weights_only=True,
+        save_weights_only=False,
         monitor='val_kappa',
         mode='max',
         save_best_only=True,

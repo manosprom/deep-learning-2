@@ -5,6 +5,8 @@ from builtins import staticmethod
 from src.models.ModelStats import ModelStats
 from src.MuraLoader import MuraLoader
 from src.seeded import tf
+from tensorflow.keras import backend as K
+import gc
 from src.models.tf_utils import metrics, callbacks, createModelPath
 from os import path
 
@@ -13,10 +15,10 @@ class ModelRunner(object):
     def __init__(self, muraLoader: MuraLoader):
         self._muraLoader = muraLoader
 
-    # def clean_up(model):
-    #     K.clear_session()
-    #     del model
-    #     gc.collect()
+    def clean_up(model):
+        K.clear_session()
+        del model
+        gc.collect()
 
     def run(self, name: str, model: tf.keras.models.Model, epochs=100, verbose=1, overwrite=False, weight_classes=False,
             batch_size=32):
@@ -25,10 +27,13 @@ class ModelRunner(object):
             if overwrite:
                 shutil.rmtree(modelPath)
             else:
-                best_model = ModelRunner.load_model(name)
+                best_model_name = ModelRunner.load_model(name)
+                best_model_path = createModelPath(name, sub=best_model_name)
+                print(best_model_path)
+                best_model = tf.keras.models.load_model(best_model_path)
                 history = ModelRunner.load_model_history(name)
                 evaluation = ModelRunner.load_evaluation(name)
-                return ModelStats(tf.keras.models.load_model(best_model), history, evaluation)
+                return ModelStats(best_model, history, evaluation)
         os.mkdir(modelPath)
 
         model = self.__compile(model)
@@ -55,6 +60,7 @@ class ModelRunner(object):
 
         evaluation = model.evaluate(test_generator)
         ModelRunner.save_evaluation(name=name, metric_names=model.metrics_names, evaluation=evaluation)
+        ModelRunner.clean_up(model)
         return ModelStats(model, history, evaluation)
 
     def __compile(self, model: tf.keras.models.Model):

@@ -9,7 +9,8 @@ def custom_cnn_builder(
         shape=(256, 256, 3),
         pooling="max",
         dropout=None,
-        pool_size=(2, 2)
+        pool_size=(2, 2),
+        pool_strides=(2, 2)
 ):
     inputs = tf.keras.layers.Input(shape=shape, name="input")
 
@@ -18,14 +19,30 @@ def custom_cnn_builder(
     for conv_level in range(layers):
         current_filters = starting_filters * (2 ** conv_level)
         for conv_number in range(convs_per_layer):
-            layer = tf.keras.layers.Conv2D(filters=current_filters, kernel_size=(3, 3), activation='relu', name=f"conv_{conv_level}_{conv_number}")(layer)
+            layer = tf.keras.layers.Conv2D(
+                filters=current_filters,
+                kernel_size=(3, 3),
+                activation='relu',
+                name=f"conv_{conv_level}_{conv_number}",
+                padding='same'
+            )(layer)
             if batch_norm:
                 layer = tf.keras.layers.BatchNormalization(name=f"bn_{conv_level}_{conv_number}")(layer)
 
         if pooling == 'avg':
-            layer = tf.keras.layers.AvgPool2D(pool_size=pool_size, name=f"mp_{conv_level}")(layer)
+            layer = tf.keras.layers.AvgPool2D(
+                pool_size=pool_size,
+                strides=pool_strides,
+                name=f"mp_{conv_level}",
+                padding='same'
+            )(layer)
         else:
-            layer = tf.keras.layers.MaxPool2D(pool_size=pool_size, name=f"mp_{conv_level}")(layer)
+            layer = tf.keras.layers.MaxPool2D(
+                pool_size=pool_size,
+                strides=pool_strides,
+                name=f"mp_{conv_level}",
+                padding='same'
+            )(layer)
 
         if dropout:
             layer = tf.keras.layers.Dropout(dropout, name=f"dropout_{conv_level}")(layer)
