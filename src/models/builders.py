@@ -11,7 +11,7 @@ def custom_cnn_builder(
         dropout=None,
         pool_size=(2, 2)
 ):
-    inputs = tf.keras.layers.Input(shape=shape)
+    inputs = tf.keras.layers.Input(shape=shape, name="input")
 
     layer = inputs
 

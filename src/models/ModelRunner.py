@@ -27,8 +27,8 @@ class ModelRunner(object):
             else:
                 best_model = ModelRunner.load_model(name)
                 history = ModelRunner.load_model_history(name)
-                evaluation = ModelRunner.load_model_evaluation(name)
-                return ModelStats(tf.keras.models.load_model(best_model), history)
+                evaluation = ModelRunner.load_evaluation(name)
+                return ModelStats(tf.keras.models.load_model(best_model), history, evaluation)
         os.mkdir(modelPath)
 
         model = self.__compile(model)
@@ -50,10 +50,11 @@ class ModelRunner(object):
 
         history = model.fit(train_generator, validation_data=validation_generator, epochs=epochs, callbacks=callbacks(model=name), verbose=verbose, class_weight=class_weights)
 
+        ModelRunner.save_training_plots(name=name, history=history.history)
         ModelRunner.save_model_history(name=name, history=history.history)
 
         evaluation = model.evaluate(test_generator)
-
+        ModelRunner.save_evaluation(name=name, metric_names=model.metrics_names, evaluation=evaluation)
         return ModelStats(model, history, evaluation)
 
     def __compile(self, model: tf.keras.models.Model):
@@ -62,6 +63,23 @@ class ModelRunner(object):
         model.compile(adam, loss=loss, metrics=[metrics()])
 
         return model
+
+    @staticmethod
+    def save_evaluation(name, metric_names, evaluation):
+        import pandas as pd
+        eval_df = pd.DataFrame(dict(zip(metric_names, evaluation)), index=[0])
+        eval_df.to_csv(createModelPath(name, "evaluation.tsv"), index=False, sep="\t")
+
+    @staticmethod
+    def load_evaluation(name):
+        import pandas as pd
+        return pd.read_csv(createModelPath(name, "evaluation.tsv"), sep="\t")
+
+    @staticmethod
+    def save_training_plots(name, history):
+        from src.visualize import plot_history
+        fig = plot_history({name: history})
+        fig.savefig(createModelPath(name, sub="training_graph.png"))
 
     @staticmethod
     def save_model_summary(name, model):
@@ -82,16 +100,18 @@ class ModelRunner(object):
     def save_model_history(name, history):
         import pandas as pd
         historyDf = pd.DataFrame.from_dict(history)
-        historyDf.to_csv(createModelPath(name, sub="model_history.txt"), index=False, sep="\t")
+        historyDf.to_csv(createModelPath(name, sub="model_history.tsv"), index=False, sep="\t")
         return historyDf
 
     @staticmethod
     def load_model_history(name):
         import pandas as pd
-        return pd.read_csv(createModelPath(name, sub="model_history.txt"), index=False, sep="\t")
+        return pd.read_csv(createModelPath(name, sub="model_history.tsv"), sep="\t")
 
     @staticmethod
     def load_model(name):
-        saved_models = [f for f in os.listdir(createModelPath(name)) if f.endswith("h5")].sort(reverse=True)
+        saved_models = [f for f in os.listdir(createModelPath(name)) if f.endswith("h5")]
+        saved_models.sort(reverse=True)
+        # print(saved_models)
         best_model = saved_models[0]
         return best_model
