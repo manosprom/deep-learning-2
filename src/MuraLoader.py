@@ -77,6 +77,9 @@ class MuraLoader(object):
         dataFrame['ImageFilename'] = temp[5]
         return dataFrame
 
+    def get_initial_sets(self):
+        return self._train_set, self._test_set
+
     def get_sets(self, split=0.2, body_part: str = None):
         from sklearn.model_selection import train_test_split
 

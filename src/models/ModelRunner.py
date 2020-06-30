@@ -18,34 +18,39 @@ class ModelRunner(object):
     #     del model
     #     gc.collect()
 
-    def run(self, name: str, model: tf.keras.models.Model, epochs=5, verbose=1, overwrite=False):
+    def run(self, name: str, model: tf.keras.models.Model, epochs=100, verbose=1, overwrite=False, weight_classes=False,
+            batch_size=32):
         modelPath = createModelPath(name)
         if path.exists(modelPath):
             if overwrite:
                 shutil.rmtree(modelPath)
             else:
-                raise FileExistsError
+                best_model = ModelRunner.load_model(name)
+                history = ModelRunner.load_model_history(name)
+                evaluation = ModelRunner.load_model_evaluation(name)
+                return ModelStats(tf.keras.models.load_model(best_model), history)
         os.mkdir(modelPath)
 
         model = self.__compile(model)
-        self.save_model_summary(name=name, model=model)
-        self.save_model_graph(name=name, model=model)
+        ModelRunner.save_model_summary(name=name, model=model)
+        ModelRunner.save_model_graph(name=name, model=model)
 
         if verbose == 1:
             print(model.summary())
 
         train_set, validation_set, test_set = self._muraLoader.get_sets(0.2)
-        train_generator, validation_generator, test_generator = self._muraLoader.get_generators(train_set, validation_set, test_set, batch_size=32)
+        train_generator, validation_generator, test_generator = self._muraLoader.get_generators(train_set, validation_set, test_set, batch_size=batch_size)
 
-        history = model.fit(
-            train_generator,
-            validation_data=validation_generator,
-            epochs=epochs,
-            callbacks=callbacks(model=name),
-            verbose=verbose
-        )
+        class_weights = None
+        if weight_classes:
+            from sklearn.utils import class_weight
+            import numpy as np
+            class_weights = class_weight.compute_class_weight(class_weight='balanced', classes=np.unique(train_set['StudyLabel']), y=train_set['StudyLabel'])
+            print(f"fitting with class_weights: {class_weights}")
 
-        self.save_model_history(name=name, history=history.history)
+        history = model.fit(train_generator, validation_data=validation_generator, epochs=epochs, callbacks=callbacks(model=name), verbose=verbose, class_weight=class_weights)
+
+        ModelRunner.save_model_history(name=name, history=history.history)
 
         evaluation = model.evaluate(test_generator)
 
@@ -76,4 +81,17 @@ class ModelRunner(object):
     @staticmethod
     def save_model_history(name, history):
         import pandas as pd
-        pd.DataFrame.from_dict(history).to_csv(createModelPath(name, sub="model_history.txt"), index=False, sep="\t")
+        historyDf = pd.DataFrame.from_dict(history)
+        historyDf.to_csv(createModelPath(name, sub="model_history.txt"), index=False, sep="\t")
+        return historyDf
+
+    @staticmethod
+    def load_model_history(name):
+        import pandas as pd
+        return pd.read_csv(createModelPath(name, sub="model_history.txt"), index=False, sep="\t")
+
+    @staticmethod
+    def load_model(name):
+        saved_models = [f for f in os.listdir(createModelPath(name)) if f.endswith("h5")].sort(reverse=True)
+        best_model = saved_models[0]
+        return best_model

@@ -6,16 +6,16 @@ from src.seeded import tf, tfa
 # https://www.tensorflow.org/api_docs/python/tf/keras/callbacks/EarlyStopping
 def earlyStopping(patience=5, verbose=0):
     return tf.keras.callbacks.EarlyStopping(
-        monitor="val_loss",
+        monitor="val_kappa",
         patience=patience,
-        mode="min",
+        mode="max",
         restore_best_weights=True,
         verbose=verbose
     )
 
 
 # https://www.tensorflow.org/api_docs/python/tf/keras/callbacks/ReduceLROnPlateau
-def reduceLROnPlateau(patience=2, verbose=0):
+def reduceLROnPlateau(patience=5, verbose=0):
     return tf.keras.callbacks.ReduceLROnPlateau(
         patience=patience,
         cooldown=2,
@@ -31,8 +31,8 @@ def checkPointer(model, verbose=0):
     checkpointer = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkPointPath,
         save_weights_only=True,
-        monitor='val_loss',
-        mode='min',
+        monitor='val_kappa',
+        mode='max',
         save_best_only=True,
         verbose=verbose
     )
