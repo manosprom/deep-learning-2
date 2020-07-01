@@ -29,12 +29,11 @@ class ModelRunner(object):
             else:
                 best_model_name = ModelRunner.load_model(name)
                 best_model_path = createModelPath(name, sub=best_model_name)
-                print(best_model_path)
                 best_model = tf.keras.models.load_model(best_model_path)
                 history = ModelRunner.load_model_history(name)
                 evaluation = ModelRunner.load_evaluation(name)
                 return ModelStats(best_model, history, evaluation)
-        os.mkdir(modelPath)
+        os.makedirs(modelPath)
 
         model = self.__compile(model)
         ModelRunner.save_model_summary(name=name, model=model)

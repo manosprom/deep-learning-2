@@ -52,7 +52,7 @@ def custom_cnn_builder(
     return tf.keras.models.Model(inputs, outputs, name="custom_cnn")
 
 
-def resnet152v2_builder(pooling="max", shape=(256, 256)):
+def resnet152v2_builder(pooling="max", shape=(256, 256, 3)):
     base_model = tf.keras.applications.ResNet152V2(
         include_top=False,
         weights='imagenet',
