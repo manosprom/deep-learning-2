@@ -4,7 +4,7 @@ from src.seeded import tf, tfa
 
 
 # https://www.tensorflow.org/api_docs/python/tf/keras/callbacks/EarlyStopping
-def earlyStopping(patience=5, verbose=0):
+def earlyStopping(patience=10, verbose=0):
     return tf.keras.callbacks.EarlyStopping(
         monitor="val_kappa",
         patience=patience,

@@ -10,7 +10,8 @@ def custom_cnn_builder(
         pooling="max",
         dropout=None,
         pool_size=(2, 2),
-        pool_strides=(2, 2)
+        pool_strides=(2, 2),
+        last_pooling=None
 ):
     inputs = tf.keras.layers.Input(shape=shape, name="input")
 
@@ -36,13 +37,18 @@ def custom_cnn_builder(
                 name=f"mp_{conv_level}",
                 padding='same'
             )(layer)
-        else:
+        elif pooling == 'max':
             layer = tf.keras.layers.MaxPool2D(
                 pool_size=pool_size,
                 strides=pool_strides,
                 name=f"mp_{conv_level}",
                 padding='same'
             )(layer)
+
+        if last_pooling == "avg":
+            layer = tf.keras.layers.GlobalAveragePooling2D(layer)
+        elif last_pooling == "max":
+            layer = tf.keras.layers.GlobalMaxPooling2D(layer)
 
         if dropout:
             layer = tf.keras.layers.Dropout(dropout, name=f"dropout_{conv_level}")(layer)
