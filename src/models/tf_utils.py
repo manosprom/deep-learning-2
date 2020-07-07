@@ -6,9 +6,9 @@ from src.seeded import tf, tfa
 # https://www.tensorflow.org/api_docs/python/tf/keras/callbacks/EarlyStopping
 def earlyStopping(patience=10, verbose=0):
     return tf.keras.callbacks.EarlyStopping(
-        monitor="val_kappa",
+        monitor="val_loss",
         patience=patience,
-        mode="max",
+        mode="min",
         restore_best_weights=True,
         verbose=verbose
     )
@@ -31,8 +31,8 @@ def checkPointer(model, verbose=0):
     checkpointer = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkPointPath,
         save_weights_only=False,
-        monitor='val_kappa',
-        mode='max',
+        monitor='val_loss',
+        mode='min',
         save_best_only=True,
         verbose=verbose
     )
@@ -58,7 +58,7 @@ def tensorBoard(model):
 
 def csvLogger(model):
     return tf.keras.callbacks.CSVLogger(
-        filename=createModelPath(model, sub="logs.csv"),
+        filename=createModelPath(model, sub="logs.tsv"),
         separator="\t",
         append=True
     )

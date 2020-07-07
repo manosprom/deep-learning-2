@@ -1,7 +1,7 @@
 def plot_history(histories, metrics=["loss", "auc", "accuracy", "kappa"], figsize=(20, 10)):
     import matplotlib.pyplot as plt
     import numpy as np
-    plt.rcParams.update({'font.size': 12})
+    plt.rcParams.update({'font.size': 10})
 
     rows = int(np.ceil(len(metrics) / 2))
     columns = 2

@@ -32,7 +32,18 @@ class MuraLoader(object):
         self._valid_image_paths_filepath = "/".join([self._mura_path, valid_image_paths_filename])
         self._valid_labeled_studies_filepath = "/".join([self._mura_path, valid_labeled_studies_filename])
 
-        self.imageDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator(
+        self._train_image_data_generator = tf.keras.preprocessing.image.ImageDataGenerator(
+            rescale=1. / 255
+        )
+
+        self._train_augment_data_generator = tf.keras.preprocessing.image.ImageDataGenerator(
+            rescale=1. / 255,
+            horizontal_flip=True,
+            vertical_flip=True,
+            rotation_range=30
+        )
+
+        self._test_image_data_generator = tf.keras.preprocessing.image.ImageDataGenerator(
             rescale=1. / 255
         )
 
@@ -84,6 +95,7 @@ class MuraLoader(object):
         from sklearn.model_selection import train_test_split
 
         if body_part:
+            print(f"Get sets only for {body_part}")
             train_set = self._train_set[self._train_set['BodyPart'] == body_part]
             test_set = self._test_set[self._test_set['BodyPart'] == body_part]
         else:
@@ -93,40 +105,67 @@ class MuraLoader(object):
         train_set, validation_set = train_test_split(train_set, stratify=train_set['StudyLabel'], random_state=seed, test_size=split)
         return train_set, validation_set, test_set
 
-    def get_generators(self, train_set, validation_set, test_set, batch_size=32):
+    def get_generators(self, train_set, validation_set, test_set, batch_size=32, augment=False):
         # https://www.tensorflow.org/api_docs/python/tf/keras/preprocessing/image/ImageDataGenerator
         # https://medium.com/datadriveninvestor/keras-imagedatagenerator-methods-an-easy-guide-550ecd3c0a92
 
         print(f"Creating train generator")
-        train_generator = self.get_generator(train_set, shuffle=True, batch_size=batch_size)
+        train_generator = self.get_generator(train_set, train=True, batch_size=batch_size, augment=augment)
 
         print(f"Creating validation generator")
-        validation_generator = self.get_generator(validation_set, shuffle=False, batch_size=batch_size)
+        validation_generator = self.get_generator(validation_set, train=False, batch_size=batch_size)
 
         print(f"Creating test generator")
-        test_generator = self.get_generator(test_set, shuffle=False, batch_size=batch_size)
+        test_generator = self.get_generator(test_set, train=False, batch_size=batch_size)
 
         return train_generator, validation_generator, test_generator
 
-    def get_generator(self, dataset, shuffle=False, batch_size=32, target_size=(256, 256), color_mode="rgb"):
-        generator = self.imageDataGenerator.flow_from_dataframe(
-            dataset,
-            directory=self._mura_path,
-            x_col='ImagePath',
-            y_col='StudyLabel',
-            weight_col=None,
-            target_size=target_size,
-            color_mode=color_mode,
-            classes=None,
-            class_mode='raw',
-            batch_size=batch_size,
-            shuffle=shuffle,
-            seed=seed,
-            save_to_dir=None,
-            save_prefix='',
-            save_format='png',
-            subset=None,
-            interpolation='nearest',
-            validate_filenames=True
-        )
-        return generator
+    def get_generator(self, dataset, train=False, batch_size=32, target_size=(256, 256), color_mode="rgb", augment=False):
+        print("augment: ", augment, "-", "train: ", train)
+        if train:
+            if augment:
+                image_data_generator = self._train_augment_data_generator
+            else:
+                image_data_generator = self._train_image_data_generator
+
+            return image_data_generator.flow_from_dataframe(
+                dataset,
+                directory=self._mura_path,
+                x_col='ImagePath',
+                y_col='StudyLabel',
+                weight_col=None,
+                target_size=target_size,
+                color_mode=color_mode,
+                classes=None,
+                class_mode='raw',
+                batch_size=batch_size,
+                shuffle=train,
+                seed=seed,
+                save_to_dir=None,
+                save_prefix='',
+                save_format='png',
+                subset=None,
+                interpolation='nearest',
+                validate_filenames=True
+            )
+        else:
+            return self._test_image_data_generator.flow_from_dataframe(
+                dataset,
+                directory=self._mura_path,
+                x_col='ImagePath',
+                y_col='StudyLabel',
+                weight_col=None,
+                target_size=target_size,
+                color_mode=color_mode,
+                classes=None,
+                class_mode='raw',
+                batch_size=batch_size,
+                shuffle=train,
+                seed=seed,
+                save_to_dir=None,
+                save_prefix='',
+                save_format='png',
+                subset=None,
+                interpolation='nearest',
+                validate_filenames=True
+            )
